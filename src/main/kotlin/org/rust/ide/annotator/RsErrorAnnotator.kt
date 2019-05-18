@@ -369,7 +369,7 @@ class RsErrorAnnotator : RsAnnotatorBase(), HighlightRangeExtension {
 
     private fun checkImplBothCopyAndDrop(holder: AnnotationHolder, attr: RsAttr) {
         if (attr.metaItem.name != "derive") return
-        val deriveCopy = attr.metaItem.metaItemArgs?.metaItemList?.find { it?.identifier?.text == "Copy" } ?: return
+        val deriveCopy = attr.metaItem.metaItemArgs?.metaItemList?.find { it?.name == "Copy" } ?: return
         val selfType = (attr.parent as? RsStructOrEnumItemElement)?.declaredType ?: return
         checkImplBothCopyAndDrop(holder, selfType, deriveCopy, attr.knownItems.Copy ?: return)
     }

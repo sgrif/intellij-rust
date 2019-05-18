@@ -68,11 +68,10 @@ object AttributeCompletionProvider : CompletionProvider<CompletionParameters>() 
     override fun addCompletions(parameters: CompletionParameters,
                                 context: ProcessingContext,
                                 result: CompletionResultSet) {
-
-        val elem = parameters.position.parent?.parent?.parent
-
+        val compositeName = parameters.position.parent
+        val elem = compositeName?.parent?.parent?.parent
         val suggestions = attributes
-            .filter { it.appliesTo.accepts(parameters.position) && elem.attrMetaItems.none { item -> item == it.name } }
+            .filter { it.appliesTo.accepts(compositeName) && elem.attrMetaItems.none { item -> item == it.name } }
             .map { createLookupElement(it.name) }
         result.addAllElements(suggestions)
     }
@@ -82,7 +81,7 @@ object AttributeCompletionProvider : CompletionProvider<CompletionParameters>() 
         val innerAttrElem = psiElement<RsInnerAttr>()
         val metaItemElem = psiElement<RsMetaItem>()
             .and(PlatformPatterns.psiElement().withParent(outerAttrElem) or PlatformPatterns.psiElement().withParent(innerAttrElem))
-        return PlatformPatterns.psiElement().withParent(metaItemElem).withLanguage(RsLanguage)
+        return PlatformPatterns.psiElement().withAncestor(2, metaItemElem).withLanguage(RsLanguage)
     }
 
     private fun createLookupElement(name: String): LookupElement =
