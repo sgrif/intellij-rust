@@ -12,7 +12,7 @@ class RsCodeFragmentFactoryTest : RsTestBase() {
     fun `test resolve string path`() {
         InlineFile("mod foo { struct S; }")
         val target = project.cargoProjects.allProjects.single().workspace!!.packages.single().targets.first()
-        val path = RsCodeFragmentFactory(project).createCrateRelativePath("::foo::S", target)
+        val path = RsCodeFragmentFactory(project).createCrateRelativePath("foo::S", target)
         val declaration = path!!.reference.resolve()
         check((declaration as RsStructItem).name == "S")
     }
