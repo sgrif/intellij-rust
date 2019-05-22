@@ -7,6 +7,8 @@ package org.rust.lang.core.psi
 
 import com.intellij.openapi.project.Project
 import org.rust.cargo.project.workspace.CargoWorkspace
+import org.rust.cargo.project.workspace.CargoWorkspace.Edition.EDITION_2015
+import org.rust.cargo.project.workspace.CargoWorkspace.Edition.EDITION_2018
 import org.rust.lang.core.macros.setContext
 import org.rust.lang.core.psi.RsPsiFactory.PathNamespace
 import org.rust.lang.core.psi.ext.CARGO_WORKSPACE
@@ -20,10 +22,17 @@ class RsCodeFragmentFactory(val project: Project) {
     private val psiFactory = RsPsiFactory(project, markGenerated = false)
 
     fun createCrateRelativePath(pathText: String, target: CargoWorkspace.Target): RsPath? {
-        check(pathText.startsWith("::"))
+        require(!pathText.startsWith("::")) { "Path shouldn't start with `::`" }
+        require(!pathText.startsWith("crate::")) { "Path shouldn't start with `crate::`" }
+
+        val prefix = when (target.edition) {
+            EDITION_2015 -> "::"
+            EDITION_2018 -> "crate::"
+        }
+
         val vFile = target.crateRoot ?: return null
         val crateRoot = vFile.toPsiFile(project) as? RsFile ?: return null
-        return psiFactory.tryCreatePath(pathText)
+        return psiFactory.tryCreatePath(prefix + pathText)
             ?.apply { setContext(crateRoot) }
     }
 

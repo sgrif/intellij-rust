@@ -6,24 +6,12 @@
 package org.rust.lang.core.resolve
 
 import org.rust.*
-import org.rust.cargo.project.model.cargoProjects
 import org.rust.cargo.project.workspace.CargoWorkspace
 import org.rust.lang.core.macros.MacroExpansionScope
 import org.rust.lang.core.types.infer.TypeInferenceMarks
 
 @ProjectDescriptor(WithStdlibRustProjectDescriptor::class)
 class RsStdlibResolveTest : RsResolveTestBase() {
-
-    override fun runTest() {
-        if (javaClass.getMethod(name).getAnnotation(MockEdition::class.java) != null) {
-            return super.runTest()
-        }
-
-        for (edition in CargoWorkspace.Edition.values()) {
-            project.cargoProjects.setEdition(edition)
-            super.runTest()
-        }
-    }
 
     fun `test resolve fs`() = stubOnlyResolve("""
     //- main.rs
@@ -33,23 +21,19 @@ class RsStdlibResolveTest : RsResolveTestBase() {
         fn main() {}
     """)
 
-    // BACKCOMPAT: Rust 1.25.0
     fun `test resolve collections`() = stubOnlyResolve("""
     //- main.rs
         use std::collections::Bound;
-                             //^ ...lib.rs|...libcore/ops/range.rs
+                             //^ ...libcore/ops/range.rs
 
         fn main() {}
     """)
 
-    // TODO handle 2018 edition in std itself
-    fun `test BTreeMap`() = expect<IllegalStateException> {
-    stubOnlyResolve("""
+    fun `test BTreeMap`() = stubOnlyResolve("""
     //- main.rs
         use std::collections::BTreeMap;
-                                //^ lib.rs
+                                //^ ...liballoc/collections/btree/map.rs
     """)
-    }
 
     fun `test resolve core`() = stubOnlyResolve("""
     //- main.rs
@@ -136,36 +120,31 @@ class RsStdlibResolveTest : RsResolveTestBase() {
                                 //^ unresolved
     """)
 
-    // BACKCOMPAT: Rust 1.26.0
     fun `test string slice resolve`() = stubOnlyResolve("""
-
     //- main.rs
         fn main() { "test".lines(); }
-                            //^ ...str.rs|...str/mod.rs
+                            //^ ...str/mod.rs
     """)
 
-    // BACKCOMPAT: Rust 1.26.0
     fun `test slice resolve`() = stubOnlyResolve("""
     //- main.rs
         fn main() {
             let x : [i32];
             x.iter()
-             //^ ...slice.rs|...slice/mod.rs
+             //^ ...slice/mod.rs
         }
     """)
 
-    // BACKCOMPAT: Rust 1.25.0
     fun `test inherent impl char 1`() = stubOnlyResolve("""
     //- main.rs
         fn main() { 'Z'.is_lowercase(); }
-                      //^ .../char.rs|...libcore/char/methods.rs
+                      //^ ...libcore/char/methods.rs
     """)
 
-    // BACKCOMPAT: Rust 1.25.0
     fun `test inherent impl char 2`() = stubOnlyResolve("""
     //- main.rs
         fn main() { char::is_lowercase('Z'); }
-                        //^ .../char.rs|...libcore/char/methods.rs
+                        //^ ...libcore/char/methods.rs
     """)
 
     fun `test inherent impl str 1`() = stubOnlyResolve("""
@@ -311,12 +290,11 @@ class RsStdlibResolveTest : RsResolveTestBase() {
         }
     """)
 
-    // BACKCOMPAT: Rust 1.26.0
     fun `test vec slice`() = stubOnlyResolve("""
     //- main.rs
         fn foo(xs: Vec<i32>) {
             xs[0..3].len();
-                     //^ ...slice.rs|...slice/mod.rs
+                     //^ ...slice/mod.rs
         }
     """)
 
@@ -345,13 +323,12 @@ class RsStdlibResolveTest : RsResolveTestBase() {
         }
     """)
 
-    // BACKCOMPAT: Rust 1.24.1
     fun `test Instant minus Duration`() = stubOnlyResolve("""
     //- main.rs
         use std::time::{Duration, Instant};
         fn main() {
             (Instant::now() - Duration::from_secs(3)).elapsed();
-                                                      //^ ...time.rs|...time/mod.rs
+                                                      //^ ...time.rs
         }
     """)
 
@@ -364,13 +341,12 @@ class RsStdlibResolveTest : RsResolveTestBase() {
         }
     """)
 
-    // BACKCOMPAT: Rust 1.24.1
     fun `test resolve arithmetic operator`() = stubOnlyResolve("""
     //- main.rs
         use std::time::{Duration, Instant};
         fn main() {
             let x = Instant::now() - Duration::from_secs(3);
-                                 //^ ...time.rs|...time/mod.rs
+                                 //^ ...time.rs
         }
     """)
 
@@ -502,8 +478,6 @@ class RsStdlibResolveTest : RsResolveTestBase() {
         }
     """, TypeInferenceMarks.questionOperator)
 
-
-
     fun `test try! macro with aliased Result`() = checkByCode("""
         mod io {
             pub struct IoError;
@@ -586,9 +560,9 @@ class RsStdlibResolveTest : RsResolveTestBase() {
     fun `test non-absolute std-qualified path in non-root module`() = stubOnlyResolve("""
     //- main.rs
         mod foo {
-            fn main() {
-                std::mem::size_of::<i32>();
-            }           //^ .../libcore/mem.rs
+            fn bar() {
+                std::mem::needs_drop::<i32>();
+            }                   //^ .../libcore/mem.rs
         }
     """)
 
@@ -596,12 +570,12 @@ class RsStdlibResolveTest : RsResolveTestBase() {
         mod foo {
             mod std {
                 pub mod mem {
-                    pub fn size_of<T>() {}
-                }         //X
+                    pub fn needs_drop<T>() {}
+                }            //X
             }
             fn main() {
-                std::mem::size_of::<i32>();
-            }           //^
+                std::mem::needs_drop::<i32>();
+            }                //^
         }
     """)
 
